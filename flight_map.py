@@ -1,7 +1,7 @@
-from ast import List
+from typing import List
 import csv
 from airports import Airport
-from flight import Flight
+from flights import Flights
 from flight_Path_broken import FlightPathBroken
 from flight_path_duplicate import FlightPathDuplicate
 
@@ -13,12 +13,14 @@ class FlightMap:
         self.flights = []
     
     def import_airports(self, csv_file: str) -> None:
-        with open(csv_file, 'r') as f:
-            reader = csv.reader(f)
-            next(reader)  # skip the header row
+        with open(csv_file,'r') as f:
+            reader = csv.reader(f,  delimiter=' ', quotechar='"')
+            next(reader)
+
             for row in reader:
                 name, code, lat, long = row
-                lat, long = float(lat), float(long)
+                lat, long = float(lat.replace(","," ")), float(long)
+                code=code.replace(",","")
                 airport = Airport(name, code, lat, long)
                 self.airports.append(airport)
 
@@ -26,22 +28,24 @@ class FlightMap:
     
     def import_flights(self, csv_file: str) -> None:
         with open(csv_file, 'r') as f:
-            reader = csv.reader(f)
-            next(reader)  # skip the header row
+            reader = csv.reader(f, delimiter=' ', quotechar='"')
+            next(reader)  
             for row in reader:
                 src_code, dst_code, duration = row
+                src_code,dst_code=src_code.replace(",",""),dst_code.replace(",","")
                 duration = float(duration)
-                flight = Flight(src_code, dst_code, duration)
+                flight = Flights(src_code, dst_code, duration)
                 self.flights.append(flight)
               
     #  liste des aéroports
-    def airports(self) -> list[Airport]:
+    def airports(self):
         return self.airports
     
-    def flights(self) -> list[Flight]:
+    # list des flights
+    def flights(self):
         return self.flights
     
-    # Recherches simple d'aéroport
+    # Recherches simple d'aéroport par code
     def airport_find(self, airport_code: str) -> Airport:
         for airport in self.airports:
             if airport.code == airport_code:
@@ -55,8 +59,8 @@ class FlightMap:
                 return True
         return False
     
-    #  Recherche des vols et aéroports accessibles à partir d'un aéroport donné
-    def flights_where(self, airport_code: str) -> list[Flight]:
+    #  Recherche des vols et aéroports accessibles à partir d'une ville donné
+    def flights_where(self, airport_code: str) -> list[Flights]:
         return [flight for flight in self.flights if flight.src_code == airport_code or flight.dst_code == airport_code]
     
     def airports_from(self, airport_code: str) -> list[Airport]:
@@ -71,7 +75,7 @@ class FlightPath:
         self.flights = []
 
 # Initialise votre chemin avec l'aéroport de départ.
-    def add(self, dst_airport: Airport, via_flight: Flight) -> None:
+    def add(self, dst_airport: Airport, via_flight: Flights) -> None:
         if dst_airport not in self.path[-1].destinations:
             raise FlightPathBroken("The airport {} is not a destination of the last airport {} in the path".format(dst_airport, self.path[-1]))
         if dst_airport in self.path:
@@ -79,7 +83,7 @@ class FlightPath:
         self.path.append(dst_airport)
         self.flights.append(via_flight)
 
-    def flights(self) -> List[Flight]:
+    def flights(self) -> List[Flights]:
         return self.flights
 
     def airports(self) -> List[Airport]:
@@ -92,7 +96,7 @@ class FlightPath:
         return sum(flight.duration for flight in self.flights)
 
 class FlightMap:
-    def __init__(self, flights: List[Flight]) -> None:
+    def __init__(self, flights: List[Flights]) -> None:
         self.flights = flights
         self.airports = {flight.src for flight in flights} | {flight.dst for flight in flights}
 
@@ -122,4 +126,8 @@ class FlightMap:
         paths = self.paths(src_airport_code, dst_airport_code)
         return [path for path in paths if path.steps() == min(path.steps() for path in paths)]
 
-    def paths_shortest_duration(self, src_airport_code: str, dst_airport_code
+    def paths_shortest_duration(self, src_airport_code: str, dst_airport_code: str) ->List[FlightPath]:
+        paths = self.path(src_airport_code, dst_airport_code)
+        return[ path for path in paths if path.steps() == min(path.steps() for path in paths)]
+
+
